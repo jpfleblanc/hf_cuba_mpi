@@ -875,19 +875,22 @@ int ord=index_vec[i][0];
 int num=index_vec[i][1];
 int extvar=index_vec[i][2];
 
-	std::cout<<"This is rank "<< mpi_rank <<" working on ord="<<ord<<", num="<< num <<", and extvar="<<extvar<<" using seed "<< intseed+i<<std::endl;
+	std::cout<<"This is rank "<< mpi_rank <<" working on ord="<<ord<<", num="<< num <<", and extvar="<<extvar<<" using seed "<< intseed<<std::endl;
 				
 		// std::stringstream state_filename;
 		// state_filename << ord+1;
 		// state_filename<<AMI_MATRIX[ord][num].ct_count_<<AMI_MATRIX[ord][num].sigma_ct_count_;
 		// state_filename << "_"<<extvar<<".state";
 	
+// if(ord!=2){continue;}
+// if(num!=6){continue;}
 	
 		int nsamples=maxeval;
 		
 			// std::cout<<"Calling integrator"<<std::endl;
 			std::vector<double> this_result;
-			integrator(AMI_MATRIX[ord][num], extern_list[extvar], nsamples, intseed+i, ord+1,AMI_MATRIX[ord][num].ct_count_ ,AMI_MATRIX[ord][num].sigma_ct_count_, num, extvar, this_result);
+			// integrator(AMI_MATRIX[ord][num], extern_list[extvar], nsamples, intseed+i, ord+1,AMI_MATRIX[ord][num].ct_count_ ,AMI_MATRIX[ord][num].sigma_ct_count_, num, extvar, this_result);
+			integrator(AMI_MATRIX[ord][num], extern_list[extvar], nsamples, intseed, ord+1,AMI_MATRIX[ord][num].ct_count_ ,AMI_MATRIX[ord][num].sigma_ct_count_, num, extvar, this_result);
 		  result_matrix[ord][num][extvar]=this_result;
 		// std::cout<<"Cleared result matrix"<<std::endl;
 		
@@ -969,9 +972,9 @@ return 0;
 #define LAST 4
 #define SEED 0
 // #define MINEVAL 2000
-#define NSTART 5000
-#define NINCREASE 500
-#define NBATCH 1000
+//#define NSTART 10000
+//#define NINCREASE 500
+//#define NBATCH 5000
 #define GRIDNO 0
 
 // #define STATEFILE NULL
@@ -1042,6 +1045,11 @@ void integrator(NewAmiCalc::solution_set &sol, NewAmiCalc::ext_vars &ext, int ns
 int NDIM=ext.KDIM_*sol.ami_parms_.N_INT_;
 std::cout<<"NDIM is "<< NDIM<<std::endl;
 int MINEVAL=50000*NDIM;
+
+int NSTART=1000*NDIM;
+int NBATCH=500*NDIM;
+int NINCREASE=250*NDIM;
+
 // int KEY1=1000*NDIM;
 // int KEY2=200*NDIM;
 // int NCOMP=2;
