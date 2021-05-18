@@ -20,6 +20,8 @@ double ereg=1e-8;
 
 int AMI_REDUCE_TRIES=40;
 
+bool global_hf=true;
+
 
 
 
@@ -92,6 +94,7 @@ graph.mpi_size=comm_size;
   int intseed=0;
   
   bool use_groups=false;//true;
+	bool use_bare=false;
   
   
   if(argc==1) 
@@ -128,6 +131,18 @@ graph.mpi_size=comm_size;
 		intseed=atoi(argv[4]);
 		global_integral=atoi(argv[5]);
     } 
+		
+		if(argc==7) 
+    { 
+        min=atoi(argv[1]);
+		max=atoi(argv[2]);
+		maxeval=atoi(argv[3]);
+		intseed=atoi(argv[4]);
+		global_integral=atoi(argv[5]);
+		use_bare=atoi(argv[6]);
+    } 
+		
+		
 	// if(argc==7) 
     // { 
         // min=atoi(argv[1]);
@@ -678,6 +693,10 @@ std::cout<<"This is rank "<<mpi_rank <<" with unique "<<ggm[m][i].ss_vec[j].Uniq
 // hf stuff
 
 graph.current_state.disp_=AmiBase::hf;
+if(use_bare){
+	graph.current_state.disp_=AmiBase::fp;
+  global_hf=false;	
+}
 
 std::cout<<"Reading ptoi.dat, pgrid.dat and Sigma_HF.dat"<<std::endl;
 graph.ami.read_hf("pgrid.dat", "ptoi.dat", "Sigma_HF.dat");
@@ -984,8 +1003,8 @@ return 0;
 #define NMIN 2
 #define FLATNESS 1
 
-#define KEY1 470 //47//47
-#define KEY2 100 // 1
+#define KEY1 -2470 //47//47
+#define KEY2 -2100 // 1
 #define KEY3 1
 #define MAXPASS 5
 #define BORDER 0.001
@@ -1046,7 +1065,7 @@ int NDIM=ext.KDIM_*sol.ami_parms_.N_INT_;
 std::cout<<"NDIM is "<< NDIM<<std::endl;
 int MINEVAL=50000*NDIM;
 
-int NSTART=1000*NDIM;
+int NSTART=2000*NDIM;
 int NBATCH=500*NDIM;
 int NINCREASE=250*NDIM;
 
@@ -1282,7 +1301,12 @@ state.t_list_.clear();
 state.t_list_.resize(gsize, 1);	
 state.mink_=kmin;
 state.maxk_=kmax;
+
+if(global_hf){
 state.disp_=AmiBase::hf;
+}else{
+	state.disp_=AmiBase::fp;
+}
 // std::cout<< "hopping is size "<<state.t_list_.size()<<std::endl;
 
 
