@@ -10,29 +10,40 @@
 #include <sstream> 
 #include <fstream>
 
-double global_lambda;//=0.40726;//0.325806;//1.44;  //0.325806;//0.5679*0.5679;
-double kc=4.0;
+///// Parameters
 
-double global_rs;//= 1.0;//2.0;// hard-coded rs   parameters["RS"];
-double global_esquare;//=global_rs*pow(32.0/(9*M_PI), 1.0/3.0);
+
+double global_lambda;
+double global_rs;
+double global_esquare;
+double kc=5.0; // cutoff in integration 
+
+int global_integral=1;// use VEGAS by default 
+int sigma_max=1;
+int bubble_max=2;
 
 double ereg=1e-8;
 
 int AMI_REDUCE_TRIES=40;
 
-bool global_hf=true;
+bool global_hf=true;// don't need to change this 
+
+int global_seed=0;
+double global_epsrel=1e-5;
+double global_epsabs=1e-10;
+int global_max, global_min, global_maxeval;
+double global_nstart=0.01;
 
 
 
+////
 
-// static int simple_integrand(const int *ndim, const double xx[],
-  // const int *ncomp, double ff[], void *userdata);
 
 static int ami_integrand(const int *ndim, const double xx[],
   const int *ncomp, double ff[], void *userdata);
  
-  
-  double get_V(NewAmiCalc::internal_state &state, NewAmiCalc::solution_set &AMI,NewAmiCalc::ext_vars &external, double lambda);
+// Assigns V product - pilfered from libamigraph
+double get_V(NewAmiCalc::internal_state &state, NewAmiCalc::solution_set &AMI,NewAmiCalc::ext_vars &external, double lambda);
   void get_q_list(std::vector<double> &qs, NewAmiCalc::solution_set &AMI, NewAmiCalc::internal_state &state, NewAmiCalc::ext_vars &external);
 
 //int seed=0; // but this can be set to anything
@@ -40,15 +51,15 @@ auto now =std::chrono::high_resolution_clock::now();
 auto seed = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
 
 AmiGraph graph(AmiBase::Pi_phud, seed);
-int global_integral=0;
 
-int sigma_max=1;
-int bubble_max=2;
 
 // std::vector< double > integrator(NewAmiCalc::solution_set &sol, NewAmiCalc::ext_vars &ext, int nsamples, int seed,std::string SFILE);
 
 void integrator(NewAmiCalc::solution_set &sol, NewAmiCalc::ext_vars &ext, int nsamples, int seed, int eff_ord, int ct, int sigct,int num, int extnum, std::vector<double> &out);
 
+
+void load_settings();
+void load_hf();
 
 
 struct evaluation_vector_set{
@@ -97,8 +108,18 @@ graph.mpi_size=comm_size;
 	bool use_bare=false;
   
   
-  if(argc==1) 
-        printf("\nNo Extra Command Line Argument Passed Other Than Program Name"); 
+  if(argc==1) {
+        printf("\nNo Extra Command Line Argument Passed Other Than Program Name");
+				printf("Will try loading parameters from paramters.param \nNo Extra Command Line Argument Passed Other Than Program Name");		
+load_settings();	
+
+max=global_max;
+min=global_min;
+maxeval=global_maxeval;
+intseed=global_seed;
+
+				// exit(0);
+	}
     if(argc==2) 
     { 
         max=atoi(argv[1]);
@@ -155,7 +176,7 @@ graph.mpi_size=comm_size;
 
 graph.ami.amibase.drop_bosonic_diverge=false;
 
-std::cout<<"M=0 "<< graph.ami.amibase.fermi_bose(0,1.0,20.0,0.3)<<std::endl;
+/* std::cout<<"M=0 "<< graph.ami.amibase.fermi_bose(0,1.0,20.0,0.3)<<std::endl;
 std::cout<<"M=1 "<< graph.ami.amibase.fermi_bose(1,1.0,20.0,0.3)<<std::endl;
 std::cout<<"M=2 at positive E"<< graph.ami.amibase.fermi_bose(2,1.0,20.0,0.3)<<std::endl;
 std::cout<<"M=2 at negative E"<< graph.ami.amibase.fermi_bose(2,1.0,20.0,-0.3)<<std::endl;
@@ -167,8 +188,10 @@ std::cout<<"M=1 "<< graph.ami.amibase.fermi_bose(1,-1.0,20.0,0.3)<<std::endl;
 std::cout<<"M=2 "<< graph.ami.amibase.fermi_bose(2,-1.0,20.0,0.3)<<std::endl;
 std::cout<<"M=3 "<< graph.ami.amibase.fermi_bose(3,-1.0,20.0,0.3)<<std::endl;
 std::cout<<"M=4 "<< graph.ami.amibase.fermi_bose(4,-1.0,20.0,0.3)<<std::endl;
+ */
 
-
+load_hf();
+/* 
 /////////////
 					// read lambda rs etc
 						
@@ -198,7 +221,7 @@ std::cout<<"M=4 "<< graph.ami.amibase.fermi_bose(4,-1.0,20.0,0.3)<<std::endl;
 					global_lambda=kappa*kappa;
 					global_esquare=global_rs*pow(32.0/(9*M_PI), 1.0/3.0);
 
-// std::cout<<kappa<<" "<<test<<" "<<test2<<std::endl;
+// std::cout<<kappa<<" "<<test<<" "<<test2<<std::endl; */
 std::cout<<"Running for lambda="<<global_lambda<<" rs="<<global_rs<<" esquare="<<global_esquare<<std::endl;
  
 
@@ -284,16 +307,16 @@ AmiGraph::gg_matrix_t ggm;
 			// graph.gm_to_ggm(graph_matrix, ggm);
 			graph.mpi_print_ggm(ggm,mpi_rank);
 			
-			for(int ord=0; ord<ggm.size(); ord++){
-				for(int group=0; group<ggm[ord].size(); group++){
-					for(int num=0; num<ggm[ord][group].graph_vec.size(); num++){
+			// for(int ord=0; ord<ggm.size(); ord++){
+				// for(int group=0; group<ggm[ord].size(); group++){
+					// for(int num=0; num<ggm[ord][group].graph_vec.size(); num++){
 						
-						std::cout<<"CT count is "<<ggm[ord][group].graph_vec[0][boost::graph_bundle].ct_count<<std::endl;
+						// std::cout<<"CT count is "<<ggm[ord][group].graph_vec[0][boost::graph_bundle].ct_count<<std::endl;
 						
-					}
-				}
+					// }
+				// }
 				
-			}
+			// }
 
 			// std::cout<<"Filtering out fock diagrams"<<std::endl;
 			// graph.ggm_filter_fock(ggm);
@@ -331,14 +354,14 @@ AmiGraph::gg_matrix_t ggm;
 					for(int n=0; n< ggm[m][g].graph_vec.size(); n++){
 						std::vector< AmiGraph::graph_t > ct_temp;
 						
-						std::cout<<"On "<<m<<" "<< g<<" "<<n<<std::endl;
+						// std::cout<<"On "<<m<<" "<< g<<" "<<n<<std::endl;
 			graph.generate_bubble_ct( ggm[m][g].graph_vec[n] , ct_temp);
-			std::cout<<"done"<<std::endl;
+			// std::cout<<"done"<<std::endl;
 			///////*******Sorting of bubble ct is suspect *********//////////
 			
-			std::cout<<"CT temp size "<<ct_temp.size()<<std::endl;
+			// std::cout<<"CT temp size "<<ct_temp.size()<<std::endl;
 			for(int i=0; i<ct_temp.size(); i++){
-				std::cout<<"Alpha size and ct_count are "<<graph.alpha_size(ct_temp[i])<<" "<<ct_temp[i][boost::graph_bundle].ct_count<<std::endl;
+				// std::cout<<"Alpha size and ct_count are "<<graph.alpha_size(ct_temp[i])<<" "<<ct_temp[i][boost::graph_bundle].ct_count<<std::endl;
 			int rel_ord=graph.alpha_size(ct_temp[i])-2;  //         -2;
 			//lets insert the ct into the ct_ggm in the appropriate spot 
 			ct_ggm[rel_ord][0].graph_vec.push_back(ct_temp[i]);
@@ -511,7 +534,7 @@ AmiGraph::gg_matrix_t ggm;
 
 			graph.save_ct_eff_orders(ggm);
 
-
+/* 
 			for(int ord=0; ord<ggm.size(); ord++){
 				for(int group=0; group<ggm[ord].size(); group++){
 					for(int num=0; num<ggm[ord][group].graph_vec.size(); num++){
@@ -522,7 +545,7 @@ AmiGraph::gg_matrix_t ggm;
 				}
 				
 			}
-
+ */
 
 			// return 0;
 
@@ -617,26 +640,26 @@ AmiGraph::gg_matrix_t ggm;
 int after_total=0;
 if(mpi_rank==0){
 	
-	std::cout<<"Before"<<std::endl;
-	for(int m=0; m< ggm.size();m++){
-			for(int i=0; i< ggm[m].size();i++){
-			for(int j=0; j< ggm[m][i].ss_vec.size(); j++){
-				std::cout<<ggm[m][i].ss_vec[j].ct_count_<<" "<<ggm[m][i].ss_vec[j].sigma_ct_count_<<std::endl;
+	// std::cout<<"Before"<<std::endl;
+	// for(int m=0; m< ggm.size();m++){
+			// for(int i=0; i< ggm[m].size();i++){
+			// for(int j=0; j< ggm[m][i].ss_vec.size(); j++){
+				// std::cout<<ggm[m][i].ss_vec[j].ct_count_<<" "<<ggm[m][i].ss_vec[j].sigma_ct_count_<<std::endl;
 				
-	}}}
+	// }}}
 	
 	
 	
 	
 			graph.ggm_reduce_ami_terms(ggm, ereg, mpi_rank, AMI_REDUCE_TRIES);
 
-std::cout<<"After"<<std::endl;
-	for(int m=0; m< ggm.size();m++){
-			for(int i=0; i< ggm[m].size();i++){
-			for(int j=0; j< ggm[m][i].ss_vec.size(); j++){
-				std::cout<<ggm[m][i].ss_vec[j].ct_count_<<" "<<ggm[m][i].ss_vec[j].sigma_ct_count_<<std::endl;
+// std::cout<<"After"<<std::endl;
+	// for(int m=0; m< ggm.size();m++){
+			// for(int i=0; i< ggm[m].size();i++){
+			// for(int j=0; j< ggm[m][i].ss_vec.size(); j++){
+				// std::cout<<ggm[m][i].ss_vec[j].ct_count_<<" "<<ggm[m][i].ss_vec[j].sigma_ct_count_<<std::endl;
 				
-	}}}
+	// }}}
 	// exit(0);
 	
 
@@ -680,7 +703,7 @@ graph.broadcast_ggm(ggm,0); // note, this does not communicate the graphs, only 
 				// }
 				
 			// }
-
+/* 
 for(int m=0; m< ggm.size();m++){
 			for(int i=0; i< ggm[m].size();i++){
 			for(int j=0; j< ggm[m][i].graph_vec.size(); j++){
@@ -688,7 +711,7 @@ std::cout<<"This is rank "<<mpi_rank <<" with unique "<<ggm[m][i].ss_vec[j].Uniq
 
 			}
 			}
-}
+} */
 
 // hf stuff
 
@@ -697,6 +720,9 @@ if(use_bare){
 	graph.current_state.disp_=AmiBase::fp;
   global_hf=false;	
 }
+
+
+
 
 std::cout<<"Reading ptoi.dat, pgrid.dat and Sigma_HF.dat"<<std::endl;
 graph.ami.read_hf("pgrid.dat", "ptoi.dat", "Sigma_HF.dat");
@@ -742,7 +768,7 @@ graph.ggm_to_ggamim(ggm,GG_AMI_MATRIX,0);
 } */
 
 
-
+/* 
 std::cout<<"Testing amim"<<std::endl;
 for(int i=0; i<AMI_MATRIX.size(); i++){
 	for(int j=0; j< AMI_MATRIX[i].size(); j++){
@@ -750,7 +776,7 @@ for(int i=0; i<AMI_MATRIX.size(); i++){
 		std::cout<<i<<" "<<j<<" "<<" "<<AMI_MATRIX[i][j].ct_count_	<<" "<<AMI_MATRIX[i][j].sigma_ct_count_	<<std::endl;
 		// }
 	}	
-}
+} */
 
 // exit(0);
 
@@ -984,8 +1010,8 @@ return 0;
 
 #define NCOMP 2
 #define NVEC 1
-#define EPSREL 1e-5
-#define EPSABS 1e-10
+// #define EPSREL 1e-5
+// #define EPSABS 1e-10
 // #define VERBOSE 0
 #define FLAG 16
 #define LAST 4
@@ -1021,28 +1047,7 @@ return 0;
 void integrator(NewAmiCalc::solution_set &sol, NewAmiCalc::ext_vars &ext, int nsamples, int seed, int eff_ord, int ct, int sigct, int num, int extnum, std::vector<double> &out){
 	
 	out.clear();
-// std::cout<<"In integrator with "<<ext.external_k_list_[0][0]	<<" "<< ext.external_k_list_[0][1]<<" "<< ext.external_k_list_[0][2]<<std::endl;
-// std::cout<<"Statefile in integrator  is "<<SFILE<<std::endl;
 
-// const char * sfile_cchar = SFILE.c_str();
-
-
-	// char vegas_state[25]="statedir/";
-	// char tail[25]=".state";
-	// char temp[20]  = "";
-  // sprintf(temp, "%d", eff_ord);
-	// strcat(vegas_state,temp);
-	// sprintf(temp, "%d", ct);
-	// strcat(vegas_state,temp);
-	// sprintf(temp, "%d", sigct);
-	// strcat(vegas_state,temp);	
-	// strcat(vegas_state,"_n_");
-	// sprintf(temp, "%d", num);
-	// strcat(vegas_state,temp);
-	// strcat(vegas_state,"_");
-	// sprintf(temp,"%d", extnum);
-	// strcat(vegas_state,temp);
-	// strcat(vegas_state,tail);
 	
 	std::stringstream state_filename;
 		state_filename << "statedir/"<<eff_ord;
@@ -1059,13 +1064,16 @@ void integrator(NewAmiCalc::solution_set &sol, NewAmiCalc::ext_vars &ext, int ns
 
 
 	
+double EPSREL=global_epsrel;
+double EPSABS=global_epsabs;
+	
 	std::vector<double> output;
 // std::complex<double> output;	
 int NDIM=ext.KDIM_*sol.ami_parms_.N_INT_;
 std::cout<<"NDIM is "<< NDIM<<std::endl;
 int MINEVAL=50000*NDIM;
 
-int NSTART=2000*NDIM;
+//2000*NDIM;
 int NBATCH=500*NDIM;
 int NINCREASE=250*NDIM;
 
@@ -1081,7 +1089,7 @@ int NINCREASE=250*NDIM;
 // int SEED=0;//(unsigned int)seedvar;//0
 // int MINEVAL=000;
 int MAXEVAL=nsamples*NDIM;//200000;
-
+int NSTART=global_nstart*MAXEVAL;
 // int NSTART=1000;
 // int NINCREASE=500;
 // int NBATCH=1000;
@@ -1482,6 +1490,131 @@ g[*ei].g_struct_.alpha_[index]=0;
 }
 	
 graph.fix_epsilons(g);	
+	
+}
+
+
+
+
+void load_hf(){
+	
+	
+/////////////
+					// read lambda rs etc
+						
+					std::ifstream infile_stream;
+					infile_stream.open("input_hf.dat");
+
+					if(infile_stream.fail()) // checks to see if file opended 
+							{ 
+							throw std::runtime_error("Could not open input_hf.dat file");
+							} 	
+						
+					std::string line;
+					std::getline(infile_stream,line);	
+					
+					std::stringstream ss;
+					std::getline(infile_stream,line);
+					
+					ss<< line;
+					ss>>global_rs;
+					std::getline(infile_stream,line);
+					
+					std::stringstream ss2;
+					ss2<<line;
+					double kappa;
+					
+					ss2>>kappa;
+					global_lambda=kappa*kappa;
+					global_esquare=global_rs*pow(32.0/(9*M_PI), 1.0/3.0);
+
+// std::cout<<kappa<<" "<<test<<" "<<test2<<std::endl;
+std::cout<<"Running for lambda="<<global_lambda<<" rs="<<global_rs<<" esquare="<<global_esquare<<std::endl;
+ 
+
+///////////// 
+	
+	
+	
+}
+
+
+void load_settings(){
+	
+	
+/////////////
+					// read lambda rs etc
+						
+					std::ifstream infile_stream;
+					infile_stream.open("parameters.param");
+
+					if(infile_stream.fail()) // checks to see if file opended 
+							{ 
+							throw std::runtime_error("Could not open parameters.param file");
+							} 	
+						
+					std::string line;
+					std::stringstream ss;
+					std::getline(infile_stream,line);
+					
+					std::string junk;
+					
+					ss<< line;
+					ss>>junk>>global_min;
+					std::stringstream().swap(ss);
+					
+					std::getline(infile_stream,line);
+					
+					ss<< line;
+					ss>>junk>>global_max;
+					std::stringstream().swap(ss);
+					
+					std::getline(infile_stream,line);
+					
+					ss<< line;
+					ss>>junk>>global_maxeval;
+					std::stringstream().swap(ss);
+					
+					std::getline(infile_stream,line);
+					
+					ss<< line;
+					ss>>junk>>global_seed;
+					std::stringstream().swap(ss);
+					
+					std::getline(infile_stream,line);
+					
+					ss<< line;
+					ss>>junk>>global_epsabs;
+					std::stringstream().swap(ss);
+					
+					std::getline(infile_stream,line);
+					
+					ss<< line;
+					ss>>junk>>global_epsrel;
+					std::stringstream().swap(ss);
+					
+					std::getline(infile_stream,line);
+					
+					ss<< line;
+					ss>>junk>>global_nstart;
+					std::stringstream().swap(ss);
+					
+
+
+std::cout<<"Running for parameters:"<<std::endl;
+std::cout<<"min: "<<global_min<<std::endl;
+std::cout<<"max: "<<global_max<<std::endl;
+std::cout<<"maxeval: "<<global_maxeval<<std::endl;
+std::cout<<"seed: "<<global_seed<<std::endl;
+std::cout<<"epsabs: "<<global_epsabs<<std::endl;
+std::cout<<"epsrel: "<<global_epsrel<<std::endl;
+std::cout<<"nstart: "<<global_nstart<<std::endl;
+std::cout<<std::endl;
+ 
+
+///////////// 
+	
+	
 	
 }
 
