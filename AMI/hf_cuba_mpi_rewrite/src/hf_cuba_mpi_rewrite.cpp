@@ -33,6 +33,7 @@ double global_epsrel=1e-5;
 double global_epsabs=1e-10;
 int global_max, global_min, global_maxeval;
 double global_nstart=0.01;
+int global_use_bare=0;
 
 
 
@@ -117,6 +118,7 @@ max=global_max;
 min=global_min;
 maxeval=global_maxeval;
 intseed=global_seed;
+use_bare=bool(global_use_bare);
 
 				// exit(0);
 	}
@@ -1599,6 +1601,12 @@ void load_settings(){
 					ss>>junk>>global_nstart;
 					std::stringstream().swap(ss);
 					
+					std::getline(infile_stream,line);
+					
+					ss<< line;
+					ss>>junk>>global_use_bare;
+					std::stringstream().swap(ss);
+					
 
 
 std::cout<<"Running for parameters:"<<std::endl;
@@ -1609,6 +1617,7 @@ std::cout<<"seed: "<<global_seed<<std::endl;
 std::cout<<"epsabs: "<<global_epsabs<<std::endl;
 std::cout<<"epsrel: "<<global_epsrel<<std::endl;
 std::cout<<"nstart: "<<global_nstart<<std::endl;
+std::cout<<"nstart: "<<global_use_bare<<std::endl;
 std::cout<<std::endl;
  
 
