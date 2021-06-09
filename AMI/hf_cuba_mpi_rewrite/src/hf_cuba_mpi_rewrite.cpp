@@ -177,6 +177,7 @@ use_bare=bool(global_use_bare);
     // } // TODO the grouped case hangs the MPI process if the number of groups to be evaluated is too small 
 
 graph.ami.amibase.drop_bosonic_diverge=false;
+graph.ami.amibase.drop_matsubara_poles=true;
 
 /* std::cout<<"M=0 "<< graph.ami.amibase.fermi_bose(0,1.0,20.0,0.3)<<std::endl;
 std::cout<<"M=1 "<< graph.ami.amibase.fermi_bose(1,1.0,20.0,0.3)<<std::endl;
@@ -1607,6 +1608,12 @@ void load_settings(){
 					ss>>junk>>global_use_bare;
 					std::stringstream().swap(ss);
 					
+					std::getline(infile_stream,line);
+					
+					ss<< line;
+					ss>>junk>>kc;
+					std::stringstream().swap(ss);
+					
 
 
 std::cout<<"Running for parameters:"<<std::endl;
@@ -1617,7 +1624,8 @@ std::cout<<"seed: "<<global_seed<<std::endl;
 std::cout<<"epsabs: "<<global_epsabs<<std::endl;
 std::cout<<"epsrel: "<<global_epsrel<<std::endl;
 std::cout<<"nstart: "<<global_nstart<<std::endl;
-std::cout<<"nstart: "<<global_use_bare<<std::endl;
+std::cout<<"use_bare: "<<global_use_bare<<std::endl;
+std::cout<<"kc: "<<kc<<std::endl;
 std::cout<<std::endl;
  
 
