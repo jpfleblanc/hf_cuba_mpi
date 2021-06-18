@@ -34,6 +34,7 @@ double global_epsabs=1e-10;
 int global_max, global_min, global_maxeval;
 double global_nstart=0.01;
 int global_use_bare=0;
+int global_use_groups=1;
 
 
 
@@ -41,6 +42,9 @@ int global_use_bare=0;
 
 
 static int ami_integrand(const int *ndim, const double xx[],
+  const int *ncomp, double ff[], void *userdata);
+	
+	static int group_ami_integrand(const int *ndim, const double xx[],
   const int *ncomp, double ff[], void *userdata);
  
 // Assigns V product - pilfered from libamigraph
@@ -57,6 +61,12 @@ AmiGraph graph(AmiBase::Pi_phud, seed);
 // std::vector< double > integrator(NewAmiCalc::solution_set &sol, NewAmiCalc::ext_vars &ext, int nsamples, int seed,std::string SFILE);
 
 void integrator(NewAmiCalc::solution_set &sol, NewAmiCalc::ext_vars &ext, int nsamples, int seed, int eff_ord, int ct, int sigct,int num, int extnum, std::vector<double> &out);
+
+void group_integrator(NewAmiCalc::solution_set_vec_t &ssamiv, NewAmiCalc::ext_vars &ext, int nsamples, int seed, int eff_ord, int ct, int sigct,int num, int extnum, std::vector<double> &out);
+
+// NewAmiCalc::ext_vars &ext, int nsamples, int seed, const char* STATEFILE);
+
+// group_integrator(GG_AMI_MATRIX[ord][num], extern_list[extvar], nsamples, intseed, ord+1,GG_AMI_MATRIX[ord][num].ct_count_ ,AMI_MATRIX[ord][num].sigma_ct_count_, num, extvar, this_result);
 
 
 void load_settings();
@@ -756,11 +766,11 @@ efile.close();
 NewAmiCalc::solution_set_matrix_t AMI_MATRIX;
 NewAmiCalc::gg_solution_set_matrix_t GG_AMI_MATRIX;
 
-// if (!use_groups){
+if (! bool(global_use_groups)){
 std::cout<<"ggm to amim"<<std::endl;
 graph.ggm_to_amim(ggm, AMI_MATRIX);
 
-/* }else{
+}else{
 	
 	// graph.mpi_print_ggm(ggm, mpi_rank);
 	
@@ -768,7 +778,7 @@ graph.ggm_to_amim(ggm, AMI_MATRIX);
 std::cout<<"ggm to gg_amim"<<std::endl;
 graph.ggm_to_ggamim(ggm,GG_AMI_MATRIX,0);
 
-} */
+} 
 
 
 /* 
@@ -814,22 +824,22 @@ g_result_matrix.resize(max+1);
 
 
 int ord_size;
-// if(!use_groups){
+if(!bool(global_use_groups)){
 ord_size=AMI_MATRIX.size();
-// }else{
-// ord_size=GG_AMI_MATRIX.size();	
-// }
+}else{
+ord_size=GG_AMI_MATRIX.size();	
+}
 
 for(int ord=0; ord<ord_size; ord++){
 	
 	std::cout<<ord<<std::endl;
 
 int group_size;
-// if(!use_groups){
+if(!bool(global_use_groups)){
 group_size=AMI_MATRIX[ord].size();
-// }else{
-// group_size=GG_AMI_MATRIX[ord].size();	
-// }
+}else{
+group_size=GG_AMI_MATRIX[ord].size();	
+}
 	
 	// std::cout<<"AMI_MATRIX of ord and size "<<ord<<" "<<AMI_MATRIX[ord].size() <<std::endl;
 result_matrix[ord].resize(group_size);
@@ -861,12 +871,12 @@ int count=0;
 for (int ord=0; ord< max; ord++){
 int ami_size;
 
-// if(!use_groups){
+if(!bool(global_use_groups)){
 ami_size=AMI_MATRIX[ord].size();
-/* }else{
+ }else{
 ami_size=GG_AMI_MATRIX[ord].size();	
 // std::cout<<"GG_AMI_MATRIX is size "<<ami_size<<" on rank "<<mpi_rank <<" at order "<<ord<<std::endl;
-} */	
+} 	
 
 int extern_size=extern_list.size();
 	for (int i=0; i< ami_size; i++){
@@ -881,11 +891,11 @@ int extern_size=extern_list.size();
 		
 
 int eff_ord;
-// if(!use_groups){
+if(!bool(global_use_groups)){
 	eff_ord=ord+1+AMI_MATRIX[ord][i].ct_count_+2*AMI_MATRIX[ord][i].sigma_ct_count_;
-// }else{
-	// eff_ord=ord+1+GG_AMI_MATRIX[ord][i][0].ct_count_+2*GG_AMI_MATRIX[ord][i][0].sigma_ct_count_;// assumes groups contain same values 
-// }
+}else{
+	eff_ord=ord+1+GG_AMI_MATRIX[ord][i][0].ct_count_+2*GG_AMI_MATRIX[ord][i][0].sigma_ct_count_;// assumes groups contain same values 
+}
 
 if(eff_ord<= max){ index_vec.push_back(index);}		
 		
@@ -935,12 +945,18 @@ int extvar=index_vec[i][2];
 	
 		int nsamples=maxeval;
 		
-			// std::cout<<"Calling integrator"<<std::endl;
+			if(!bool(global_use_groups)){
 			std::vector<double> this_result;
-			// integrator(AMI_MATRIX[ord][num], extern_list[extvar], nsamples, intseed+i, ord+1,AMI_MATRIX[ord][num].ct_count_ ,AMI_MATRIX[ord][num].sigma_ct_count_, num, extvar, this_result);
 			integrator(AMI_MATRIX[ord][num], extern_list[extvar], nsamples, intseed, ord+1,AMI_MATRIX[ord][num].ct_count_ ,AMI_MATRIX[ord][num].sigma_ct_count_, num, extvar, this_result);
 		  result_matrix[ord][num][extvar]=this_result;
-		// std::cout<<"Cleared result matrix"<<std::endl;
+			}else{
+				
+				std::vector<double> this_result;
+			group_integrator(GG_AMI_MATRIX[ord][num], extern_list[extvar], nsamples, intseed, ord+1,GG_AMI_MATRIX[ord][num][0].ct_count_ ,GG_AMI_MATRIX[ord][num][0].sigma_ct_count_, num, extvar, this_result);
+		  result_matrix[ord][num][extvar]=this_result;
+				
+				
+			}
 		
 		
 } 
@@ -955,6 +971,7 @@ for (int ord=0; ord< max+1; ord++){
 		for(int j=0; j< g_result_matrix[ord][i].size(); j++){
 			// MPI_Reduce(&last, &g_last, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 			for(int m=0; m<4; m++){
+				// std::cout<<"Reducing "<<ord<< " "<<i<<" "<< j<<" "<<m<<std::endl;
 		MPI_Reduce(&result_matrix[ord][i][j][m], &g_result_matrix[ord][i][j][m], 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 			}
 		}
@@ -980,12 +997,12 @@ for (int ord=0; ord< max+1; ord++){
 
 file<< ord<<" "<<i<<" "<<j<<" ";
 
-// if(!use_groups){
+if(!global_use_groups){
 file<<ord+1<<" "<<AMI_MATRIX[ord][i].ct_count_<<" "<<AMI_MATRIX[ord][i].sigma_ct_count_<<" ";
-// }else{
-// file<< ord+1<<" "<<GG_AMI_MATRIX[ord][i][0].ct_count_	<<" "<<GG_AMI_MATRIX[ord][i][0].sigma_ct_count_	<<" ";
+}else{
+file<< ord+1<<" "<<GG_AMI_MATRIX[ord][i][0].ct_count_	<<" "<<GG_AMI_MATRIX[ord][i][0].sigma_ct_count_	<<" ";
 	
-// }
+}
 
 file<< extern_list[j].external_freq_[0].real()<<" "<<extern_list[j].external_freq_[0].imag()<<" ";
 file<<extern_list[j].BETA_<<" "<< extern_list[j].MU_.real()<<" "<<extern_list[j].MU_.imag()<<" ";
@@ -1046,6 +1063,129 @@ return 0;
 #define KEY 0
 
 // #define PseudoRandom True
+
+
+
+void group_integrator(NewAmiCalc::solution_set_vec_t &ssamiv, NewAmiCalc::ext_vars &ext, int nsamples, int seed, int eff_ord, int ct, int sigct,int num, int extnum, std::vector<double> &out){
+	
+	
+	out.clear();
+
+	
+	std::stringstream state_filename;
+		state_filename << "statedir/"<<eff_ord;
+		state_filename<<ct<<sigct<<"_n_"<<num<<"_"<<extnum<<".state";
+	
+	const std::string tmp=state_filename.str();
+	const char* vegas_state=tmp.c_str();	
+	
+
+ std::cout<<"Statefile in integrator  is "<<vegas_state<<std::endl;
+	
+	
+	std::vector<double> output;
+// std::complex<double> output;
+std::cout<<ssamiv.size()<<std::endl;
+
+
+	
+double EPSREL=global_epsrel;
+double EPSABS=global_epsabs;
+
+int NDIM=ext.KDIM_*ssamiv[0].ami_parms_.N_INT_;
+std::cout<<"NDIM is "<< NDIM<<std::endl;
+int MINEVAL=50000*NDIM;
+int NBATCH=500*NDIM;
+int NINCREASE=250*NDIM;
+
+int MAXEVAL=nsamples*NDIM;
+int NSTART=global_nstart*MAXEVAL;
+int LDXGIVEN=NDIM;
+
+
+int comp, nregions, neval, fail;
+double integral[NCOMP], error[NCOMP], prob[NCOMP];
+
+
+evaluation_vector_set eval_v(ssamiv,ext);
+
+
+
+
+//////////////////////////
+// double complex saved;
+
+if(global_integral==0){
+  printf("\n------------------- Divonne test -------------------\n");
+
+  Divonne(NDIM, NCOMP, group_ami_integrand, (void*)&eval_v, NVEC,
+    EPSREL, EPSABS, FLAG, seed,
+    MINEVAL, MAXEVAL, KEY1, KEY2, KEY3, MAXPASS,
+    BORDER, MAXCHISQ, MINDEVIATION,
+    NGIVEN, LDXGIVEN, NULL, NEXTRA, NULL,
+    vegas_state, SPIN,
+    &nregions, &neval, &fail, integral, error, prob);
+	
+	
+
+  printf("DIVONNE RESULT:\tnregions %d\tneval %d\tfail %d\n",  nregions, neval, fail);
+  for( comp = 0; comp < NCOMP; ++comp ){
+    printf("DIVONNE RESULT:\t%.6e +- %.6e\tp = %.3f\n",      (double)integral[comp], (double)error[comp], (double)prob[comp]);
+	  
+	  out.push_back((double)integral[comp]);
+	  out.push_back((double)error[comp]);
+  }
+}
+  
+if(global_integral==1){  
+   printf("-------------------- Vegas test --------------------\n");
+
+  Vegas(NDIM, NCOMP, group_ami_integrand, (void*)&eval_v, NVEC,
+    EPSREL, EPSABS, FLAG, seed,
+    MINEVAL, MAXEVAL, NSTART, NINCREASE, NBATCH,
+    GRIDNO, vegas_state, SPIN,
+    &neval, &fail, integral, error, prob);
+
+  printf("VEGAS RESULT:\tneval %d\tfail %d\n",
+    neval, fail);
+  for( comp = 0; comp < NCOMP; ++comp ){
+    printf("VEGAS RESULT:\t%.6e +- %.6e\tp = %.3f\n",
+      (double)integral[comp], (double)error[comp], (double)prob[comp]);
+	out.push_back((double)integral[comp]);
+	  out.push_back((double)error[comp]);
+  }
+}
+
+ 
+ if(global_integral==2){
+ printf("\n-------------------- Cuhre test --------------------\n");
+
+  Cuhre(NDIM, NCOMP,  group_ami_integrand, (void*)&eval_v, NVEC,
+    EPSREL, EPSABS, FLAG,
+    MINEVAL, MAXEVAL, KEY,
+    vegas_state, SPIN,
+    &nregions, &neval, &fail, integral, error, prob);
+
+  printf("CUHRE RESULT:\tnregions %d\tneval %d\tfail %d\n",
+    nregions, neval, fail);
+  for( comp = 0; comp < NCOMP; ++comp ){
+    printf("CUHRE RESULT:\t%.6e +- %.6e\tp = %.3f\n",
+      (double)integral[comp], (double)error[comp], (double)prob[comp]);
+
+
+	out.push_back((double)integral[comp]);
+	  out.push_back((double)error[comp]);
+
+  }
+}
+
+
+
+
+// return output ;///M_PI;
+	
+	
+}
 
 void integrator(NewAmiCalc::solution_set &sol, NewAmiCalc::ext_vars &ext, int nsamples, int seed, int eff_ord, int ct, int sigct, int num, int extnum, std::vector<double> &out){
 	
@@ -1200,6 +1340,134 @@ if(global_integral==1){
 	
 	
 }
+
+
+static int group_ami_integrand(const int *ndim, const double xx[],
+  const int *ncomp, double ff[], void *userdata){
+		
+double kmin,kmax;
+double ktemp;
+		
+evaluation_vector_set *eval;	 
+std::vector<NewAmiCalc::solution_set> sol_v;
+NewAmiCalc::ext_vars ext ;
+
+eval=(evaluation_vector_set *) userdata;
+
+sol_v=eval->sol_;
+ext=eval->ext_vars_;
+
+NewAmiCalc::k_vector_t k;
+NewAmiCalc::k_vect_list_t k_list;
+		
+		
+	
+int kdim=ext.KDIM_;
+if (kdim !=3){
+	throw std::runtime_error("Only works for kdim=3");
+}
+
+int gsize=sol_v[0].R0_.size();
+
+double magk=std::sqrt(std::pow(ext.external_k_list_[0][0],2)+std::pow(ext.external_k_list_[0][1],2)+std::pow(ext.external_k_list_[0][2],2));
+double maxf=std::abs(ext.external_freq_[0]);
+
+kmin=0; 
+kmax=kc;	
+		
+		
+
+double kx,ky,kz;
+double mag,theta,phi;
+
+double Jk=1;
+int j=0;
+do{
+
+
+mag=xx[j]*kmax;
+theta=xx[j+1]*M_PI;
+phi=xx[j+2]*2.0*M_PI;
+Jk=Jk*std::pow(mag,2)*std::sin(theta)*kmax*2.0*std::pow(M_PI,2);
+
+kx=mag*std::sin(theta)*std::cos(phi);
+ky=mag*std::sin(theta)*std::sin(phi);
+kz=mag*std::cos(theta);
+
+k.push_back(kx);
+k.push_back(ky);
+k.push_back(kz);
+
+k_list.push_back(k);
+k.clear();	
+	
+	
+j=j+kdim;
+}while(j< *ndim);
+
+	
+NewAmiCalc::internal_state state(k_list.size(), k_list[0].size());
+
+
+state.t_list_.clear();
+state.t_list_.resize(gsize, 1);	
+state.mink_=kmin;
+state.maxk_=kmax;
+
+if(global_hf){
+state.disp_=AmiBase::hf;
+}else{
+	state.disp_=AmiBase::fp;
+}
+
+state.internal_k_list_=k_list;
+
+
+std::complex<double> result_sum(0,0);
+
+for(int s=0; s< sol_v.size(); s++){
+	
+NewAmiCalc::solution_set sol;
+
+
+sol=sol_v[s];
+
+AmiBase::ami_vars vars=graph.ami.construct_ami_vars(sol.R0_,sol.prefactor_, state, ext);
+
+
+double norm= 1.0/std::pow(2*M_PI,state.dim_*state.internal_k_list_.size());
+double V=get_V(state, sol, ext,  global_lambda); //1.44); // lambda should not be hard-coded
+double sq=std::pow(2, sol.loops_);
+double ct=std::pow(-global_lambda/4.0/M_PI/global_esquare, sol.ct_count_); 
+
+std::complex<double> ami_result=graph.ami.amibase.evaluate(sol.ami_parms_, sol.R_, sol.P_, sol.S_,  vars, sol.Unique, sol.Rref, sol.Eval_list );
+
+std::complex<double> calc_result=Jk*norm*V*sq*ct*ami_result;
+
+
+if(abs(calc_result.real())>1e8 || abs(calc_result.imag())>1e8){ 
+
+calc_result=(0,0);
+
+}
+
+
+if(std::isnan(calc_result.real()) || std::isnan(calc_result.imag())){
+		std::cout<<"Nan ignored"<<std::endl;
+}
+
+result_sum+=calc_result;
+
+
+}
+
+ff[0]=result_sum.real();//*factor;
+ff[1]=result_sum.imag();//*factor;
+	  
+	  
+	return 0;  		
+		
+	}
 
 
 static int ami_integrand(const int *ndim, const double xx[],
@@ -1614,6 +1882,12 @@ void load_settings(){
 					ss>>junk>>kc;
 					std::stringstream().swap(ss);
 					
+					std::getline(infile_stream,line);
+					
+					ss<< line;
+					ss>>junk>>global_use_groups;
+					std::stringstream().swap(ss);
+					
 
 
 std::cout<<"Running for parameters:"<<std::endl;
@@ -1626,6 +1900,7 @@ std::cout<<"epsrel: "<<global_epsrel<<std::endl;
 std::cout<<"nstart: "<<global_nstart<<std::endl;
 std::cout<<"use_bare: "<<global_use_bare<<std::endl;
 std::cout<<"kc: "<<kc<<std::endl;
+std::cout<<"use_groups: "<<global_use_groups<<std::endl;
 std::cout<<std::endl;
  
 
