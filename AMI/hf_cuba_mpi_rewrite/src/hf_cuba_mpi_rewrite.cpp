@@ -1096,10 +1096,11 @@ int NDIM=ext.KDIM_*ssamiv[0].ami_parms_.N_INT_;
 std::cout<<"NDIM is "<< NDIM<<std::endl;
 int MINEVAL=50000*NDIM;
 int NBATCH=500*NDIM;
-int NINCREASE=250*NDIM;
+int NINCREASE=0;//250*NDIM;
 
 int MAXEVAL=nsamples*NDIM;
 int NSTART=global_nstart*MAXEVAL;
+// int NSTART=MAXEVAL;
 int LDXGIVEN=NDIM;
 
 
@@ -1218,7 +1219,8 @@ int MINEVAL=50000*NDIM;
 
 //2000*NDIM;
 int NBATCH=500*NDIM;
-int NINCREASE=250*NDIM;
+// int NINCREASE=250*NDIM;
+int NINCREASE=0;//250*NDIM;
 
 // int KEY1=1000*NDIM;
 // int KEY2=200*NDIM;
@@ -1233,6 +1235,7 @@ int NINCREASE=250*NDIM;
 // int MINEVAL=000;
 int MAXEVAL=nsamples*NDIM;//200000;
 int NSTART=global_nstart*MAXEVAL;
+// int NSTART=MAXEVAL;
 // int NSTART=1000;
 // int NINCREASE=500;
 // int NBATCH=1000;
