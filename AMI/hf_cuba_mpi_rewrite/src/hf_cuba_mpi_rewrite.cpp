@@ -189,7 +189,7 @@ use_bare=bool(global_use_bare);
 
 graph.ami.amibase.drop_bosonic_diverge=false;
 graph.ami.amibase.drop_matsubara_poles=true;
-graph.ami.amibase.is_real_external=false;//true;
+// graph.ami.amibase.is_real_external=false;//true;
 
 /* std::cout<<"M=0 "<< graph.ami.amibase.fermi_bose(0,1.0,20.0,0.3)<<std::endl;
 std::cout<<"M=1 "<< graph.ami.amibase.fermi_bose(1,1.0,20.0,0.3)<<std::endl;
