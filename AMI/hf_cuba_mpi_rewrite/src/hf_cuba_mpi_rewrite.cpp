@@ -1051,6 +1051,8 @@ return 0;
 // #define EPSREL 1e-5
 // #define EPSABS 1e-10
 // #define VERBOSE 0
+// flag 16 - is keep statefile
+// flag 48 - discard integration but keep the grid 
 #define FLAG 16
 #define LAST 4
 #define SEED 0
