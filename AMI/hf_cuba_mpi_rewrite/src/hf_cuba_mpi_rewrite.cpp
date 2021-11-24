@@ -36,6 +36,7 @@ double global_nstart=0.01;
 int global_use_bare=0;
 int global_use_groups=0;
 int ZERO_EXTERNAL_Q=0;
+int ZERO_EXTERNAL=0;
 
 
 
@@ -189,6 +190,12 @@ use_bare=bool(global_use_bare);
 
 graph.ami.amibase.drop_bosonic_diverge=false;
 graph.ami.amibase.drop_matsubara_poles=true;
+
+if(ZERO_EXTERNAL && ZERO_EXTERNAL_Q){
+	ZERO_EXTERNAL_Q=0;
+}
+
+
 // graph.ami.amibase.is_real_external=false;//true;
 
 /* std::cout<<"M=0 "<< graph.ami.amibase.fermi_bose(0,1.0,20.0,0.3)<<std::endl;
@@ -619,6 +626,26 @@ for(int j=0; j< ggm[m][i].graph_vec.size(); j++){
 }}	
 	
 }
+
+if(ZERO_EXTERNAL){
+
+
+for(int m=0; m< ggm.size();m++){
+for(int i=0; i< ggm[m].size();i++){
+for(int j=0; j< ggm[m][i].graph_vec.size(); j++){
+	// std::cout<<"-----"<<std::endl;
+	// std::cout<<"Zeroing external index="<<m+2<<std::endl;
+	// graph.print_all_edge_info(ggm[m][i].graph_vec[j]);
+	graph.zero_external(ggm[m][i].graph_vec[j], m+1);
+	// std::cout<<std::endl;
+	// graph.print_all_edge_info(ggm[m][i].graph_vec[j]);
+	// std::cout<<"-----"<<std::endl;
+}
+}}	
+	
+}
+
+
 
 			graph.ggm_construct_ami_sol(ggm, ereg, mpi_rank);
 			
@@ -1917,6 +1944,12 @@ void load_settings(){
 					ss>>junk>>ZERO_EXTERNAL_Q;
 					std::stringstream().swap(ss);
 					
+					std::getline(infile_stream,line);
+					
+					ss<< line;
+					ss>>junk>>ZERO_EXTERNAL;
+					std::stringstream().swap(ss);
+					
 					
 
 
@@ -1932,6 +1965,7 @@ std::cout<<"use_bare: "<<global_use_bare<<std::endl;
 std::cout<<"kc: "<<kc<<std::endl;
 std::cout<<"use_groups: "<<global_use_groups<<std::endl;
 std::cout<<"ZERO_EXTERNAL_Q: "<< ZERO_EXTERNAL_Q <<std::endl;
+std::cout<<"ZERO_EXTERNAL: "<< ZERO_EXTERNAL <<std::endl;
 std::cout<<std::endl;
  
 
