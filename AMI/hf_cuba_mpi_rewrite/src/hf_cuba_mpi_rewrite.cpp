@@ -19,7 +19,7 @@ double global_esquare;
 double kc=5.0; // cutoff in integration 
 
 int global_integral=1;// use VEGAS by default 
-int sigma_max=1;
+int sigma_max=2;
 int bubble_max=2;
 
 double ereg=1e-8;
@@ -319,7 +319,7 @@ AmiGraph::gg_matrix_t ggm;
 
 			// ggm.resize(graph_matrix.size());
 			// graph.read_ggmp("../../coulomb_graphs/ggm_coulomb_irr_nofock_RC2/",ggm, max);
-			graph.read_ggmp("../../coulomb_graphs/ggm_coulomb_irr/",ggm, max);
+			graph.read_ggmp("../../coulomb_graphs/ggm_coulomb_irr_RC2/",ggm, max);
 			// graph.read_ggmp("../../coulomb_graphs/ggm_coulomb_irr_grouped/",ggm, max);
 			// graph.read_ggmp("../../coulomb_graphs/ggm_coulomb_o2_ladder/",ggm, max);
 			std::cout<<"Completed read"<<std::endl;
@@ -438,6 +438,7 @@ AmiGraph::gg_matrix_t ggm;
 			graph.gm_to_ggm(temp_gm,ct_ggm);
 
 			graph.merge_ggm(ggm,ct_ggm);
+			
 			std::cout<<"AFTER merge ggm contains "<<std::endl;
 			graph.mpi_print_ggm(ggm, mpi_rank);
 
@@ -514,6 +515,11 @@ AmiGraph::gg_matrix_t ggm;
 			// graph.print_all_edge_info(sig_ct_ggm[1][0].graph_vec[0]);
 
 			graph.merge_ggm(ggm,sig_ct_ggm);
+			// std::vector<AmiGraph::gg_vec_t>().swap(sig_ct_ggm);
+			// std::vector<AmiGraph::gg_vec_t>().swap(ct_ggm);
+			// sig_ct_ggm.clear();
+			// ct_ggm.clear();
+			
 			// ggm=sig_ct_ggm;
 			// std::cout<<"Testing line 3"<<std::endl;
 			// graph.print_all_edge_info(ggm[1][0].graph_vec[0]);
@@ -647,7 +653,7 @@ for(int j=0; j< ggm[m][i].graph_vec.size(); j++){
 
 
 
-			graph.ggm_construct_ami_sol(ggm, ereg, mpi_rank);
+			// graph.ggm_construct_ami_sol(ggm, ereg, mpi_rank);
 			
 			
 
@@ -675,11 +681,9 @@ for(int j=0; j< ggm[m][i].graph_vec.size(); j++){
 
 			// return 0;
 
-
-
-			std::ofstream sizefile;
-			sizefile.open("initial_sol_sizes.dat");
-			int total=0;
+			graph.ggm_construct_ami_sol(ggm, ereg, mpi_rank);
+			
+			
 			for(int m=0; m< ggm.size();m++){
 			for(int i=0; i< ggm[m].size();i++){
 			for(int j=0; j< ggm[m][i].graph_vec.size(); j++){
@@ -691,9 +695,16 @@ for(int j=0; j< ggm[m][i].graph_vec.size(); j++){
 			total+=ggm[m][i].ss_vec[j].R_[m+1].size();
 
 			}
-			}}
+			}} 
 
 			sizefile.close();
+			
+
+
+			std::ofstream sizefile;
+			sizefile.open("initial_sol_sizes.dat");
+			int total=0;
+			
 
 int after_total=0;
 if(mpi_rank==0){
@@ -707,7 +718,7 @@ if(mpi_rank==0){
 	// }}}
 	
 	
-	
+			
 	
 			graph.ggm_reduce_ami_terms(ggm, ereg, mpi_rank, AMI_REDUCE_TRIES);
 
