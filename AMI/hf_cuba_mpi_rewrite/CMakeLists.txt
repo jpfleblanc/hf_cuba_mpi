@@ -43,8 +43,8 @@ add_executable(hf_cuba_mpi
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native -std=c++11 -DUSE_MPI -lstdc++fs")# -ffast-math")
 
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../libami/install/lib)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../libami/install/include)
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../../libami/install/lib)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../../libami/install/include)
 
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../libamigraph/install/lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../libamigraph/install/include)
@@ -58,7 +58,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../../Cuba-4.2.1/install/incl
 #NOTE: The relative paths in libami and libamigraph compilation don't allow cmake to install. fix later
 
 	
-target_link_libraries(hf_cuba_mpi ${CMAKE_CURRENT_SOURCE_DIR}/../libami/install/lib/libamibase.so ${CMAKE_CURRENT_SOURCE_DIR}/../libamigraph/install/lib/libamigraph.so  m stdc++fs Eigen3::Eigen ${CMAKE_CURRENT_SOURCE_DIR}/../../../Cuba-4.2.1/install/lib/libcuba.a boost_system boost_filesystem)
+target_link_libraries(hf_cuba_mpi ${CMAKE_CURRENT_SOURCE_DIR}/../../../libami/install/lib/libamibase.so ${CMAKE_CURRENT_SOURCE_DIR}/../libamigraph/install/lib/libamigraph.so  m stdc++fs Eigen3::Eigen ${CMAKE_CURRENT_SOURCE_DIR}/../../../Cuba-4.2.1/install/lib/libcuba.a boost_system boost_filesystem)
 install(TARGETS ${EXEC_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin )
 #install (TARGETS ${EXEC_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin )
 #install(TARGETS dmft RUNTIME DESTINATION "bin/")
