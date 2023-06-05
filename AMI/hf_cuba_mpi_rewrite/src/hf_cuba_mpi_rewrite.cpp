@@ -319,6 +319,7 @@ AmiGraph::gg_matrix_t ggm;
 
 			// ggm.resize(graph_matrix.size());
 			// graph.read_ggmp("../../coulomb_graphs/ggm_coulomb_irr_nofock_RC2/",ggm, max);
+      std::cout<<"Max on read is "<<max<<std::endl;
 			graph.read_ggmp("../../coulomb_graphs/ggm_coulomb_irr_RC2/",ggm, max);
 			// graph.read_ggmp("../../coulomb_graphs/ggm_coulomb_irr_grouped/",ggm, max);
 			// graph.read_ggmp("../../coulomb_graphs/ggm_coulomb_o2_ladder/",ggm, max);
@@ -541,7 +542,7 @@ AmiGraph::gg_matrix_t ggm;
 			
 			
 			std::cout<<"Filtering out diagrams based on max effective order"<<std::endl;
-			graph.ggm_filter_max_eff_order(ggm,max,bubble_max,sigma_max);
+			graph.ggm_filter_max_eff_order(ggm,max,bubble_max,sigma_max,0);
 			graph.mpi_print_ggm(ggm,mpi_rank);
 
 
@@ -684,6 +685,10 @@ for(int j=0; j< ggm[m][i].graph_vec.size(); j++){
 			graph.ggm_construct_ami_sol(ggm, ereg, mpi_rank);
 			
 			
+			std::ofstream sizefile;
+			sizefile.open("initial_sol_sizes.dat");
+			int total=0;
+			
 			for(int m=0; m< ggm.size();m++){
 			for(int i=0; i< ggm[m].size();i++){
 			for(int j=0; j< ggm[m][i].graph_vec.size(); j++){
@@ -701,10 +706,6 @@ for(int j=0; j< ggm[m][i].graph_vec.size(); j++){
 			
 
 
-			std::ofstream sizefile;
-			sizefile.open("initial_sol_sizes.dat");
-			int total=0;
-			
 
 int after_total=0;
 if(mpi_rank==0){
@@ -735,6 +736,7 @@ if(mpi_rank==0){
 
 			std::ofstream aftersizefile;
 			aftersizefile.open("after_sol_sizes.dat");
+      
 			
 			for(int m=0; m< ggm.size();m++){
 			for(int i=0; i< ggm[m].size();i++){
