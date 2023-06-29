@@ -1,0 +1,7 @@
+min: 0   #minimum evaluation order
+max: 2   #max evaluation order in Kun notation
+maxeval: 10000000   #maximum number of samples evaluated is NDIM*maxeval 
+seed: 420   #RNG seed for integrator 
+epsabs: 1e-10   #absolute accuracy desired
+epsrel: 1e-2   #relative accuracy desired 
+nstart: 0.2   #fraction of total samples in first iteration
